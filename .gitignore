@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.rds
+*.txt
+*.csv
+*.xlsx
+res_tss_multiregion.rds
+github-token.R
+.positai
+bin/
