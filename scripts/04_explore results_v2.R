@@ -11,20 +11,17 @@ library(gridExtra)
 
 # Load data and results ---------------------------------------------------
 
+monitora <- readRDS(here("data", "monitora_2025.rds"))
 data_wide <- readRDS(here("data", "data_wide.rds"))
-data_long <- readRDS(here("data", "data_long.rds"))
-res <- readRDS(here("results", "res.rds"))
 
-#monitora <- readRDS(here("data", "monitora_2025.rds"))
+pas <- read_rds(here("data", "pa_covars.rds")) %>%
+  print()
 
-# pas <- read_rds(here("data", "pa_covars.rds")) %>%
-#   print()
-# 
-# species <- monitora$especies %>%
-#   print()
-# 
-# rm(monitora)
-# rm(data_wide)
+species <- monitora$especies %>%
+  print()
+
+rm(monitora)
+rm(data_wide)
 
 
 #lambdapost <- readRDS(here("tss", "tss_lambdapost.rds"))
@@ -444,7 +441,7 @@ tabela_r %>%
     axis.title.x = element_text(size = 14), # Adjust size for X-axis title
     axis.title.y = element_text(size = 14)  # Adjust size for Y-axis title
   )#+
-  #labs(color = "Population trend")
+#labs(color = "Population trend")
 
 ggsave(plot = last_plot(),
        scale = 4,
@@ -471,7 +468,7 @@ tabela_r %>%
   geom_hline(yintercept = 0, linewidth = 0.1, alpha = 0.3) +
   geom_vline(xintercept = nrow(tabela_r)/2, linewidth = 0.1, alpha = 0.3) +
   geom_linerange(aes(ymin = lower, ymax = upper),
-                  linewidth = 0.4, alpha = 1) +
+                 linewidth = 0.4, alpha = 1) +
   scale_color_manual(values = c("inc" = "blue", "stable" = "darkgrey", "dec" = "red")) +
   labs(x = expression("Population (descending order of average" ~ beta[1] ~ ")"),
        #y = expression(beta[1] ~ "(temporal trend)"),
@@ -559,14 +556,14 @@ npost %>%
             upper = quantile(n, prob = 0.975, na.rm=TRUE)) %>%
   ungroup() %>%
   mutate(pa_name = case_when(#pa_name == "estacao_ecologica_da_terra_do_meio" ~ "Terra do Meio Ecological Station",
-                             #pa_name == "estacao_ecologica_de_maraca" ~ "Maracá Ecological Station",
-                             pa_name == "parque_nacional_da_amazonia" ~ "Amazônia National Park",
-                             #pa_name == "parque_nacional_do_jau" ~ "Jaú National Park",
-                             pa_name == "parque_nacional_do_juruena" ~ "Juruena National Park",
-                             #pa_name == "parque_nacional_serra_da_cutia" ~ "Serra da Cutia National Park",
-                             pa_name == "reserva_biologica_do_gurupi" ~ "Gurupi Biological Reserve",
-                             pa_name == "reserva_extrativista_do_alto_tarauaca" ~ "Alto Tarauacá Extractive Reserve",
-                             pa_name == "reserva_extrativista_do_cazumba_iracema" ~ "Cazumbá-Iracema Extractive Reserve")) %>%
+    #pa_name == "estacao_ecologica_de_maraca" ~ "Maracá Ecological Station",
+    pa_name == "parque_nacional_da_amazonia" ~ "Amazônia National Park",
+    #pa_name == "parque_nacional_do_jau" ~ "Jaú National Park",
+    pa_name == "parque_nacional_do_juruena" ~ "Juruena National Park",
+    #pa_name == "parque_nacional_serra_da_cutia" ~ "Serra da Cutia National Park",
+    pa_name == "reserva_biologica_do_gurupi" ~ "Gurupi Biological Reserve",
+    pa_name == "reserva_extrativista_do_alto_tarauaca" ~ "Alto Tarauacá Extractive Reserve",
+    pa_name == "reserva_extrativista_do_cazumba_iracema" ~ "Cazumbá-Iracema Extractive Reserve")) %>%
   #mutate(pa_name = str_replace_all(pa_name, "_", " "),
   #       pa_name = str_to_title(pa_name)) %>%
   #arrange(pa_name, species) %>%
@@ -918,7 +915,7 @@ glmm_data <-  tabela_r %>%
          pa = as.factor(dense_rank(pa_name)),
          #pa_type = as.factor(dense_rank(pa_type)),
          pa_type = case_when(pa_type == "strictly_protected" ~ "strictly protected",
-                        .default = "sustainable use"),
+                             .default = "sustainable use"),
          pa_type = factor(pa_type, levels = c("strictly protected", "sustainable use")),
          sp = case_when(pa_type == "strictly_protected" ~ 1,
                         .default = 0),
@@ -927,10 +924,10 @@ glmm_data <-  tabela_r %>%
          forest_loss = as.numeric(scale(loss)),
          #percent_loss_50km = as.numeric(scale(percent_loss_50km)),
          redlist = case_when(is.na(redlist) ~ "Not threatened",
-                        .default = "Threatened"),
+                             .default = "Threatened"),
          pop_total = as.numeric(scale(log(pop_total))),
          #region = as.factor(region_ter_steege)
-         ) %>%
+  ) %>%
   mutate(trophic = case_when(trophic %in% c("omnivore", "carnivore") ~ "secondary",
                              .default = "primary")) %>%
   mutate(trophic = factor(trophic, levels = c("primary", "secondary"))) %>%
@@ -972,7 +969,7 @@ tabela_r %>%
             min_pop = min(pop_total),
             max_pop = max(pop_total))
 
-  
+
 # checar tutorial:
 # https://ourcodingclub.github.io/tutorials/mixed-models/
 #library(lme4)
@@ -1169,4 +1166,4 @@ ggplot(your_data, aes(x = Category, y = Value, fill = Period)) +
   labs(y = "Increase in Lambda") + # Y-axis label
   theme_minimal() + # Or other theme for aesthetics
   theme(axis.title.x = element_blank()) # Remove x-axis title if desired  
-  
+

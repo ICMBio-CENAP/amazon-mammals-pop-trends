@@ -7,12 +7,10 @@ library(tidyverse)
 # load data and results
 data_wide <- readRDS(here("data", "data_wide.rds"))
 data_long <- readRDS(here("data", "data_long.rds"))
-#res <- readRDS(here("results", "res_tss.rds"))
-res <- readRDS(here("results", "res_tss_multiregion.rds"))
-#res <- readRDS(here("results", "tss_single_species.rds"))
-#res <- readRDS(here("results", "tss_single_species_fixed_p.rds"))
+#res <- readRDS(here("results", "res_tss_multiregion.rds"))
+res <- readRDS(here("results", "res.rds"))
 
-#----- create template to filter the posterior
+#----- create mask to filter the posterior
 # sampled_year should tell if the pa was sampled on a given year
 # regardless of which and how many sites were sampled on that year
 # sampled_site should tell if a given site was ever sampled in a given pa

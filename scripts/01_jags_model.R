@@ -29,22 +29,27 @@ rm(data_wide)
 # bundle data for jagsUI
 jags_data <- list(y = mydata$y,
                   pa = dense_rank(mydata$pa),
+                  #sp = dense_rank(mydata$sp),
                   pop = mydata$pop,
                   site = mydata$site,
-                  year = mydata$year-2013,
+                  nsite_pa = mydata$indexes$nsite,
+                  year_cov = mydata$year-2013,
+                  #rep = mydata$rep,
+                  #w = w,
+                  
                   nobs = mydata$nobs,
                   npa = mydata$npa,
+                  #nsp = mydata$nsp,
                   npop = mydata$npop,
-                  #npop_pa = mydata$indexes$npops,
                   nsite = mydata$nsite,
-                  #nsite_pa = mydata$indexes$nsite,
                   nyear = mydata$nyear
-                  )
+                  #nrep = mydata$nrep
+)
 rm(mydata) # save space
 str(jags_data)
 
 # write model in jags
-sink(here("tss", "tss.jags"))
+sink(here("scripts", "tss.jags"))
 cat("
 model {
 
@@ -83,18 +88,10 @@ tau.b0.global <- pow(sigma.b0.global,-2)
       #----- population-level priors
       for (pop in 1:npop) {
       
-      # inclusion prob
-      #omega[pa,pop] ~ dunif(0,1)
-      
       # abundance
       a0[pa,pop] ~ dnorm(mu.a0.pa[pa],tau.a0.pa[pa])
       a1[pa,pop] ~ dnorm(mu.a1.pa[pa],tau.a1.pa[pa])
       
-      # zero-inflation
-      #for (site in 1:nsite) {
-      #  w[pa,pop,site] ~ dbern(omega[pa,pop])
-      #}#site
-
       # detection
       b0[pa,pop] ~ dnorm(mu.b0.pa[pa],tau.b0.pa[pa])
       
@@ -111,13 +108,12 @@ tau.b0.global <- pow(sigma.b0.global,-2)
 # ecological submodel
 for (pa in 1:npa) {
   for(pop in 1:npop){
-      #for(site in 1:nsite){
         for(year in 1:nyear){
       
-        log(lambda[pa,pop,year]) <- a0[pa,pop] + a1[pa,pop]*(year[year]-1) # minus 1 to set 1st to zero
+        log(lambda[pa,pop,year]) <- a0[pa,pop] + a1[pa,pop]*(year_cov[year]-1) # minus 1 to set 1st to zero
         
-        for(site in 1:nsite){
-          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])T(0, 150)
+        for(site in 1:nsite_pa[pa]){
+          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])
         }#site
 
    }#year
@@ -141,7 +137,7 @@ for (pa in 1:npa) {
 for(i in 1:nobs){
   
   # observation model
-  y[i] ~ dbin( p[pa[i],pop[i],year[i]], n[pa[i],pop[i],site[i],year[i]] )
+  y[i] ~ dbin( p[pa[i],pop[i],year_cov[i]], n[pa[i],pop[i],site[i],year_cov[i]] )
 
 }#i
 
@@ -177,22 +173,15 @@ n_empirical[2,3,,] # check again
 n_empirical[1,1,,] # check again
 n_empirical[2,4,,] # check again
 
-#z_emprirical <- apply(y_wide, c(5,4), max, na.rm=TRUE)
-#z_emprirical[z_emprirical == Inf | z_emprirical == -Inf ] <- 0
-#z_emprirical[z_emprirical > 0] <- 1
-#z_emprirical
-
-inits <- function() list(n = n_empirical#,
-                         #z = z_emprirical
-)
+inits <- function() list(n = n_empirical)
 inits()
 
 
 # mcmc parameters
-ni <- 750000
-nt <- 2500
-nb <- 250000
-nc <- 3
+ni <- 75
+nt <- 2
+nb <- 25
+nc <- 1
 
 
 # call jags
@@ -201,7 +190,7 @@ mod <- jagsUI::jags(data=jags_data,
                     inits=inits,
                     #inits=NULL,
                     parameters.to.save=params,
-                    model.file=here("tss", "tss.jags"),
+                    model.file=here("scripts", "tss.jags"),
                     n.chains=nc,
                     n.thin=nt,
                     n.iter=ni,
@@ -209,6 +198,6 @@ mod <- jagsUI::jags(data=jags_data,
                     parallel = TRUE
 )
 
-saveRDS(mod, here("results", "res_tss_multiregion.rds"))
+#saveRDS(mod, here("results", "res_tss_multiregion.rds"))
 
 

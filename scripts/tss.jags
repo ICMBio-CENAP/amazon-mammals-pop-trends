@@ -1,0 +1,93 @@
+
+model {
+
+##----- global-level priors
+
+# abundance
+mu.a0.global ~ dnorm(0,0.01)
+mu.a1.global ~ dnorm(0,0.01)
+sigma.a0.global ~ dunif(0,10)
+sigma.a1.global ~ dunif(0,10)
+tau.a0.global <- pow(sigma.a0.global,-2)
+tau.a1.global <- pow(sigma.a1.global,-2)
+
+
+# detection
+mu.b0.global ~ dnorm(0, 0.01)
+sigma.b0.global ~ dunif(0,10)
+tau.b0.global <- pow(sigma.b0.global,-2)
+
+#----- PA-level priors
+    for (pa in 1:npa) {
+    
+      # abundance
+      mu.a0.pa[pa] ~ dnorm(mu.a0.global,tau.a0.global)
+      mu.a1.pa[pa] ~ dnorm(mu.a1.global,tau.a1.global)
+      sigma.a0.pa[pa] ~ dunif(0,10)
+      sigma.a1.pa[pa] ~ dunif(0,10)
+      tau.a0.pa[pa] <- pow(sigma.a0.pa[pa],-2)
+      tau.a1.pa[pa] <- pow(sigma.a1.pa[pa],-2)
+
+      # detection
+      mu.b0.pa[pa] ~ dnorm(mu.b0.global,tau.b0.global)
+      sigma.b0.pa[pa] ~ dunif(0,10)
+      tau.b0.pa[pa] <- pow(sigma.b0.pa[pa],-2)
+
+      #----- population-level priors
+      for (pop in 1:npop) {
+      
+      # abundance
+      a0[pa,pop] ~ dnorm(mu.a0.pa[pa],tau.a0.pa[pa])
+      a1[pa,pop] ~ dnorm(mu.a1.pa[pa],tau.a1.pa[pa])
+      
+      # detection
+      b0[pa,pop] ~ dnorm(mu.b0.pa[pa],tau.b0.pa[pa])
+      
+      # random yesr effects on detection
+      tau.year[pa,pop] <- 1 / (sd.year[pa,pop]*sd.year[pa,pop])
+      sd.year[pa,pop] ~ dunif(0, 1)
+
+      }#pop
+    }#pa
+
+
+##----- likelihood
+
+# ecological submodel
+for (pa in 1:npa) {
+  for(pop in 1:npop){
+        for(year in 1:nyear){
+      
+        log(lambda[pa,pop,year]) <- a0[pa,pop] + a1[pa,pop]*(year_cov[year]-1) # minus 1 to set 1st to zero
+        
+        for(site in 1:nsite_pa[pa]){
+          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])
+        }#site
+
+   }#year
+  }#pop
+}#pa
+
+
+# observation submodel
+for (pa in 1:npa) {
+  for(pop in 1:npop){
+    for(year in 1:nyear){
+
+    eps_year[pa,pop,year] ~ dnorm(0, tau.year[pa,pop])
+    logit(p[pa,pop,year]) <- b0[pa,pop] + eps_year[pa,pop,year]
+    
+    }#year
+  }#pop
+}#pa 
+
+# observation process
+for(i in 1:nobs){
+  
+  # observation model
+  y[i] ~ dbin( p[pa[i],pop[i],year_cov[i]], n[pa[i],pop[i],site[i],year_cov[i]] )
+
+}#i
+
+
+}#model
