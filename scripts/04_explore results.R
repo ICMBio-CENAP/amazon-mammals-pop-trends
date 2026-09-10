@@ -26,11 +26,9 @@ res <- readRDS(here("results", "res.rds"))
 # rm(monitora)
 # rm(data_wide)
 
-
-#lambdapost <- readRDS(here("tss", "tss_lambdapost.rds"))
-npost <- readRDS(here("tss", "tss_npost.rds"))
-rpost <- readRDS(here("tss", "tss_rpost.rds"))
-ppost <- readRDS(here("tss", "tss_ppost.rds"))
+npost <- readRDS(here("results", "tss_npost.rds"))
+rpost <- readRDS(here("results", "tss_rpost.rds"))
+ppost <- readRDS(here("results", "tss_ppost.rds"))
 
 
 # explore detection p -----------------------------------------------------
@@ -58,7 +56,7 @@ ggsave(plot = last_plot(),
        width = 6,
        height = 4,
        dpi = 300,
-       here("report", "images", "p_histogram.jpeg"))
+       here("results", "p_histogram.jpeg"))
 # common recommendation: widths 6-8 cm (single column) or 16-18 cm (double column)
 #maximum height of around 27 cm
 
@@ -75,23 +73,6 @@ p_summary <- ppost %>%
 p_mean <- p_summary$pmean
 p_min <- p_summary$pmin
 p_max <- p_summary$pmax
-
-
-# explore lambda ----------------------------------------
-
-#lambdapost %>%
-#  group_by(pa,species) %>%
-#  summarise(mean_lambda = mean(lambda)) %>%
-#  ungroup() %>%
-#  ggplot(aes(x = mean_lambda)) +
-#  geom_histogram(bins = 20,
-#                 color = "black", fill = "lightblue",
-#                 alpha = 0.6) +
-#  theme_bw() +
-#  theme(panel.grid.major = element_blank(),
-#        panel.grid.minor = element_blank()) +
-#  labs(x = "lambda médio", y = "Freq") +
-#  xlim(0,100) # NB! tem um valor muito alto!
 
 
 # explore n and pop trends ------------------------------------------------
@@ -130,13 +111,11 @@ npost %>%
   summarise(mean_n = mean(n)) %>%
   ungroup() %>%
   arrange(desc(mean_n))
-# suspicious: Cebus olivaceus from Monte Roraima and Guerlinguetus from Ipau-Anilzinho
-# remove them in next iteration. I suspect they did not converge (check)
 
 # check Dasyprocta iacki
 npost %>%
   filter(pa == 123, species == "Dasyprocta iacki") %>%
-  filter(sampled_year == "y") %>%
+  #filter(sampled_year == "y") %>%
   group_by(species, year) %>%
   summarise(mean = mean(n, na.rm=TRUE),
             lower = quantile(n, prob = 0.025, na.rm=TRUE),
@@ -153,18 +132,6 @@ npost %>%
   theme(axis.text = element_text(size = 12)) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
-
-
-# vamos excluir temporariamente essa populacao da base de dados
-# npost <- npost %>%
-#   filter(! (pa == 189 & species == "Cebus olivaceus")) %>%
-#   print()
-# rpost <- rpost %>%
-#   filter(! (pa == 189 & species == "Cebus olivaceus")) %>%
-#   print()
-# ppost <- ppost %>%
-#   filter(! (pa == 189 & species == "Cebus olivaceus")) %>%
-#   print()
 
 
 # get relative abundance summaries
@@ -184,7 +151,7 @@ n_max <- n_summary$nmax
 # agrupar tendencias por uc ribbon
 npost %>%
   filter(pa == 207) %>%
-  filter(sampled_year == "y") %>%
+  #filter(sampled_year == "y") %>%
   group_by(species, year) %>%
   summarise(mean = mean(n, na.rm=TRUE),
             lower = quantile(n, prob = 0.1, na.rm=TRUE),
@@ -220,7 +187,7 @@ ggsave(plot = last_plot(),
 
 # agrupar por uc barras
 npost %>%
-  filter(sampled_year == "y") %>%
+  #filter(sampled_year == "y") %>%
   filter(pa == 232) %>%
   #filter(species == "Dasyprocta fuliginosa") %>%
   group_by(species, year) %>%
@@ -509,7 +476,7 @@ decliningSpecies <- tabela_r %>%
 # plot trends of significantly declining pops
 npost %>%
   filter(paste(pa_name, species) %in% decliningSpecies) %>%
-  filter(sampled_year == "y") %>%
+  #filter(sampled_year == "y") %>%
   group_by(pa, species, year) %>%
   summarise(mean = mean(n, na.rm=TRUE),
             lower = quantile(n, prob = 0.025, na.rm=TRUE),
