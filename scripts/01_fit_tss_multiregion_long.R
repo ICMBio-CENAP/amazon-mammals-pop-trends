@@ -44,7 +44,7 @@ rm(mydata) # save space
 str(jags_data)
 
 # write model in jags
-sink(here("tss", "tss.jags"))
+sink(here("scripts", "tss.jags"))
 cat("
 model {
 
@@ -117,7 +117,7 @@ for (pa in 1:npa) {
         log(lambda[pa,pop,year]) <- a0[pa,pop] + a1[pa,pop]*(year[year]-1) # minus 1 to set 1st to zero
         
         for(site in 1:nsite){
-          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])T(0, 150)
+          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])#T(0, 150)
         }#site
 
    }#year
@@ -189,8 +189,8 @@ inits()
 
 
 # mcmc parameters
-ni <- 750000
-nt <- 2500
+ni <- 500000
+nt <- 1500
 nb <- 250000
 nc <- 3
 
@@ -201,7 +201,7 @@ mod <- jagsUI::jags(data=jags_data,
                     inits=inits,
                     #inits=NULL,
                     parameters.to.save=params,
-                    model.file=here("tss", "tss.jags"),
+                    model.file=here("scripts", "tss.jags"),
                     n.chains=nc,
                     n.thin=nt,
                     n.iter=ni,
@@ -209,6 +209,6 @@ mod <- jagsUI::jags(data=jags_data,
                     parallel = TRUE
 )
 
-saveRDS(mod, here("results", "res_tss_multiregion.rds"))
+saveRDS(mod, here("results", "res_2026sep12.rds"))
 
 

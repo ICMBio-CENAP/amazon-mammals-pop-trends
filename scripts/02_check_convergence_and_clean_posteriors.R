@@ -8,7 +8,7 @@ library(jagsUI)
 # load data and results
 data_wide <- readRDS(here("data", "data_wide.rds"))
 data_long <- readRDS(here("data", "data_long.rds"))
-res <- readRDS(here("results", "res_tss_multiregion.rds"))
+res <- readRDS(here("results", "res_2026sep12.rds"))
 
 
 #----- check overall convergence

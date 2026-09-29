@@ -36,10 +36,18 @@ tau.b0.global <- pow(sigma.b0.global,-2)
       #----- population-level priors
       for (pop in 1:npop) {
       
+      # inclusion prob
+      #omega[pa,pop] ~ dunif(0,1)
+      
       # abundance
       a0[pa,pop] ~ dnorm(mu.a0.pa[pa],tau.a0.pa[pa])
       a1[pa,pop] ~ dnorm(mu.a1.pa[pa],tau.a1.pa[pa])
       
+      # zero-inflation
+      #for (site in 1:nsite) {
+      #  w[pa,pop,site] ~ dbern(omega[pa,pop])
+      #}#site
+
       # detection
       b0[pa,pop] ~ dnorm(mu.b0.pa[pa],tau.b0.pa[pa])
       
@@ -56,12 +64,13 @@ tau.b0.global <- pow(sigma.b0.global,-2)
 # ecological submodel
 for (pa in 1:npa) {
   for(pop in 1:npop){
+      #for(site in 1:nsite){
         for(year in 1:nyear){
       
-        log(lambda[pa,pop,year]) <- a0[pa,pop] + a1[pa,pop]*(year_cov[year]-1) # minus 1 to set 1st to zero
+        log(lambda[pa,pop,year]) <- a0[pa,pop] + a1[pa,pop]*(year[year]-1) # minus 1 to set 1st to zero
         
-        for(site in 1:nsite_pa[pa]){
-          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])
+        for(site in 1:nsite){
+          n[pa,pop,site,year] ~ dpois(lambda[pa,pop,year])T(0, 150)
         }#site
 
    }#year
@@ -85,7 +94,7 @@ for (pa in 1:npa) {
 for(i in 1:nobs){
   
   # observation model
-  y[i] ~ dbin( p[pa[i],pop[i],year_cov[i]], n[pa[i],pop[i],site[i],year_cov[i]] )
+  y[i] ~ dbin( p[pa[i],pop[i],year[i]], n[pa[i],pop[i],site[i],year[i]] )
 
 }#i
 
