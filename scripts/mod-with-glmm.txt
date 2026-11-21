@@ -1,0 +1,144 @@
+model {
+
+  ##----- Global-level priors
+
+  # Abundance global priors
+  mu.a0.global ~ dunif(-5, 5)
+  sigma.a0.global ~ dunif(0, 2.5)
+  tau.a0.global <- pow(sigma.a0.global, -2)
+
+  # Detection global priors
+  mu.b0.global ~ dnorm(0, 0.5)
+  sigma.b0.global ~ dunif(0, 2.5)
+  tau.b0.global <- pow(sigma.b0.global, -2)
+
+
+  ##----- PA-level priors and hyper-parameters
+  for (pa in 1:npa) {
+    mu.a0.pa[pa] ~ dt(mu.a0.global, tau.a0.global, 4)
+    mu.b0.pa[pa] ~ dnorm(mu.b0.global, tau.b0.global)
+
+    sigma.a0.pa[pa] ~ dunif(0, 2.5)
+    sigma.b0.pa[pa] ~ dunif(0, 2.5)
+
+    tau.a0.pa[pa] <- pow(sigma.a0.pa[pa], -2)
+    tau.b0.pa[pa] <- pow(sigma.b0.pa[pa], -2)
+
+    # PA-specific observation variance (OLRE)
+    # Note: precision = 16 gives prior SD = 0.25; precision = 0.5 gives prior SD ~ 1.41
+    sigma.obs.pa[pa] ~ dnorm(0, 4) T(0,)
+    tau.obs.pa[pa] <- pow(sigma.obs.pa[pa], -2)
+  }
+
+
+  ##----- GLM / mixed-model priors for r[j] (PA & species attributes)
+  b0_r ~ dnorm(0, 4)
+
+  # Continuous covariate slopes (standardized in jags_data)
+  b_forest_loss ~ dnorm(0, 1)
+  b_pop_size ~ dnorm(0, 1)
+  b_body_mass ~ dnorm(0, 1)
+
+  # Categorical covariate effects (reference category = 0 for identifiability)
+  b_mgmt[1] <- 0
+  for (m in 2:n_mgmt) {
+    b_mgmt[m] ~ dnorm(0, 1)
+  }
+
+  b_troph[1] <- 0
+  for (t in 2:n_troph) {
+    b_troph[t] ~ dnorm(0, 1)
+  }
+  
+  b_threat[1] <- 0
+  for (th in 2:n_threat) {
+    b_threat[th] ~ dnorm(0, 1)
+  }
+  
+  # Random intercept for species on r: (1 | species)
+  sigma.sp.r ~ dunif(0, 1.5)
+  tau.sp.r <- pow(sigma.sp.r, -2)
+  for (sp in 1:n_species) {
+    eps_sp_r[sp] ~ dnorm(0, tau.sp.r)
+  }
+
+  # Random intercept for PA on r: (1 | pa)
+  sigma.pa.r ~ dunif(0, 1.5)
+  tau.pa.r <- pow(sigma.pa.r, -2)
+  for (pa in 1:npa) {
+    eps_pa_r[pa] ~ dnorm(0, tau.pa.r)
+  }
+
+  # Residual SD of r[j] around regression mean
+  sigma.r.resid ~ dunif(0, 1.5)
+  tau.r.resid <- pow(sigma.r.resid, -2)
+
+
+  ##----- Population/PA combination parameters (Flat Indexing)
+  for (j in 1:n_pa_pop_combos) {
+    a0[j] ~ dt(mu.a0.pa[pa_map[j]], tau.a0.pa[pa_map[j]], 4)
+
+    mu.r[j] <- b0_r +
+      b_forest_loss * forest_loss_j[j] +
+      b_pop_size * pop_size_j[j] +
+      b_body_mass * body_mass_j[j] +
+      b_mgmt[mgmt_j[j]] +
+      b_troph[troph_j[j]] +
+      b_threat[threat_j[j]] +
+      eps_sp_r[sp_map[j]] +
+      eps_pa_r[pa_map[j]]
+
+    r[j] ~ dnorm(mu.r[j], tau.r.resid)
+
+    b0[j] ~ dnorm(mu.b0.pa[pa_map[j]], tau.b0.pa[pa_map[j]])
+
+    # Combination-level site variance parameter
+    sd.site[j] ~ dunif(0, 3)
+    tau.site[j] <- pow(sd.site[j], -2)
+
+    # Combination-level year variance component
+    sigma.year.combo[j] ~ dunif(0, 2.5)
+    tau.year.combo[j] <- pow(sigma.year.combo[j], -2)
+  }
+
+
+  ##----- Random Effects
+  for (s in 1:n_total_sites) {
+    eps_site[s] ~ dt(0, tau.site[combo_map[s]], 4)
+  }
+
+  for (py in 1:n_combo_years) {
+    eps_year[py] ~ dt(0, tau.year.combo[combo_year_map[py]], 4)
+  }
+
+  for (i in 1:nobs) {
+    eps_obs[i] ~ dt(0, tau.obs.pa[pa_obs[i]], 4)
+  }
+
+
+  ##----- LIKELIHOOD (Poisson with Site Random Effects & Binomial Observations)
+  for (u in 1:n_units) {
+    log(lambda[u]) <- a0[combo_unit[u]] +
+      r[combo_unit[u]] * (year_unit[u] - 1) +
+      eps_site[site_unit[u]]
+
+    n[u] ~ dpois(lambda[u]) T(0, 100)
+  }
+
+  for (i in 1:nobs) {
+    logit(p[i]) <- b0[combo_obs[i]] +
+      eps_year[combo_year_obs[i]] +
+      eps_obs[i]
+
+    y[i] ~ dbin(p[i], n[unit_obs[i]])
+    y.rep[i] ~ dbin(p[i], n[unit_obs[i]])
+
+    ftd.obs[i] <- pow(sqrt(y[i]) - sqrt(n[unit_obs[i]] * p[i]), 2)
+    ftd.rep[i] <- pow(sqrt(y.rep[i]) - sqrt(n[unit_obs[i]] * p[i]), 2)
+  }
+
+  fit.obs <- sum(ftd.obs[])
+  fit.rep <- sum(ftd.rep[])
+  bayesian.p <- step(fit.rep - fit.obs)
+
+}
