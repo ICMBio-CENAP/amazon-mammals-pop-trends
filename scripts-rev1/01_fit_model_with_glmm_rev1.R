@@ -163,6 +163,8 @@ jags_data <- list(
 
 str(jags_data)
 
+# save jags_data
+saveRDS(jags_data, "data-rev1/jags_data.rds")
 
 
 #----- parametros a monitorar
@@ -224,13 +226,13 @@ inits()
 # nc <- 3
 
 # para testes
-ni <- 100
-nt <- 1
-nb <- 10
-nc <- 3
+# ni <- 250
+# nt <- 1
+# nb <- 10
+# nc <- 3
 
 
-# # para testes
+# para testes
 # ni <- 500
 # nt <- 1
 # nb <- 100
@@ -238,10 +240,10 @@ nc <- 3
 
 
 # para testes
-# ni <- 50000
-# nt <- 60
-# nb <- 20000
-# nc <- 3
+ni <- 1500
+nt <- 2
+nb <- 500
+nc <- 3
 
 
 # check predicted size of posterior
@@ -271,7 +273,7 @@ system.time(mod <- jagsUI::jags(data = jags_data,
                                 parallel = FALSE))
 
 # salvar
-#saveRDS(mod, "03_saida/res_olre.rds")
+saveRDS(mod, "results-rev1/res.rds")
 
 # elapsed/3600
 123371.863/3600
@@ -325,9 +327,6 @@ abline(v = 1.1, lty = "dashed", lwd = 2, col = "red")
 
 round(length(which(mod$Rhat$n > 1.1))/length(mod$Rhat$n), 2)
 
-hist(mod$n.eff$n)
-hist(mod$n.eff$p)
-
 #traceplot(mod, parameter = "n")
 #traceplot(mod, parameter = "n_sum")
 #traceplot(mod, parameter = "p")
@@ -335,12 +334,14 @@ hist(mod$n.eff$p)
 # check n
 str(mod$sims.list$n)
 hist(mod$sims.list$n)
+hist(mod$n.eff$n)
 #hist(mod$sims.list$n, xlim = c(0,100))
 
 
 # check p
 str(mod$sims.list$p)
 hist(mod$sims.list$p)
+hist(mod$n.eff$p)
 
 # check r
 str(mod$sims.list$r)
@@ -348,26 +349,42 @@ hist(mod$sims.list$r)
 
 
 # check r predictors
-hist(mod$sims.list$b_body_mass)
+hist(mod$sims.list$b_body_mass, 
+     main="Body mass effect", xlab = "Effect")
 abline(v = 0, lty = "dashed", lwd = 2, col = "red")
-hist(mod$sims.list$b_pop_size)
+
+hist(mod$sims.list$b_pop_size, 
+     main="Human population size effect", xlab = "Effect")
 abline(v = 0, lty = "dashed", lwd = 2, col = "red")
-hist(mod$sims.list$b_forest_loss)
+
+hist(mod$sims.list$b_forest_loss, 
+     main="Forest loss effect", xlab = "Effect")
 abline(v = 0, lty = "dashed", lwd = 2, col = "red")
 
 str(mod$sims.list$b_mgmt)
+hist(mod$sims.list$b_mgmt[,2], 
+     main="Sustainable use", xlab = "Effect")
+abline(v = 0, lty = "dashed", lwd = 2, col = "red")
+
 boxplot(mod$sims.list$b_mgmt, 
         names = c("strict", "use"), 
         col = c("skyblue", "salmon"),
         main = "Group Comparison",
         ylab = "Value")
 
+hist(mod$sims.list$b_troph[,2], 
+     main="Secondary consumer effect", xlab = "Effect")
+abline(v = 0, lty = "dashed", lwd = 2, col = "red")
 
 boxplot(mod$sims.list$b_troph, 
         names = c("primary", "secondary"), 
         col = c("skyblue", "salmon"),
         main = "Group Comparison",
         ylab = "Value")
+
+hist(mod$sims.list$b_threat[,2], 
+     main="Threatened status effect", xlab = "Effect")
+abline(v = 0, lty = "dashed", lwd = 2, col = "red")
 
 boxplot(mod$sims.list$b_threat, 
         names = c("non-threatened", "threatened"), 
@@ -399,13 +416,13 @@ units_df |>
   geom_line(aes(x = year, y = mean), linewidth = 0.3, alpha = 0.8) +
   geom_point(aes(x = year, y = mean),  shape = 21,
              color = "white", stroke = 2,
-             fill = "black", size = 2, alpha = 1) +
+             fill = "black", size = 4, alpha = 1) +
   geom_linerange(aes(x = year, y = mean,
                      ymin=lower95, ymax=upper95),
-                 linewidth = 0.4, alpha = 0.8) +
+                 linewidth = 0.7, alpha = 1) +
   geom_linerange(aes(x = year, y = mean,
                      ymin=lower80, ymax=upper80),
-                 linewidth = 1, alpha = 0.6) +
+                 linewidth = 3, alpha = 0.5) +
   #coord_cartesian(xlim = c(2014, 2025), expand = FALSE) +
   scale_x_continuous(breaks = scales::breaks_pretty(n=5)) +
   ylim(0,NA) +
@@ -418,5 +435,56 @@ units_df |>
         panel.grid.minor = element_blank()) +
   facet_wrap(~species, scales = "free", ncol = 3) +
   theme(strip.text = element_text(size = 14))
+
+ggsave(plot = last_plot(),
+       scale = 4,
+       units = "cm",
+       width = 8,
+       height = 6,
+       dpi = 300,
+       "results-rev1/cazumba_trends_linerange.jpeg")
+
+
+
+units_df |>
+  mutate(n = apply(mod$sims.list$n, 2, mean),
+         year = year+2013) |>
+  left_join(pop_attr |> select(pa, pop, species)) |>
+  filter(pa == 20) |> # cazumba
+  group_by(species, year) |>
+  summarise(mean = mean(n, na.rm=TRUE),
+            lower95 = quantile(n, prob = 0.1, na.rm=TRUE),
+            upper95 = quantile(n, prob = 0.9, na.rm=TRUE),
+            lower80 = quantile(n, prob = 0.2, na.rm=TRUE),
+            upper80 = quantile(n, prob = 0.8, na.rm=TRUE)) |>
+  ungroup() |>
+  complete(year, nesting(species)) |>
+  ggplot(aes(x = year, y = mean)) +
+  geom_ribbon(aes(ymin = lower95, ymax = upper95), fill = "steelblue", alpha = 0.5) +
+  geom_ribbon(aes(ymin = lower80, ymax = upper80), fill = "steelblue", alpha = 0.7) +
+  geom_line(color = "black", linewidth = 0.2, alpha = 0.4) +
+  geom_point(color = "black", size = 1.5, alpha = 0.6) +
+  ylim(0,NA) +
+  #expand_limits(x = c(2014, 2024)) +
+  scale_x_continuous(breaks = scales::breaks_pretty(n=5)) +
+  xlab("") +
+  ylab("Relative abundance") +
+  #theme_classic() +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12)) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  facet_wrap(~species, scales = "free", ncol = 3) +
+  theme(strip.text = element_text(size = 14))
+
+ggsave(plot = last_plot(),
+       scale = 4,
+       units = "cm",
+       width = 8,
+       height = 6,
+       dpi = 300,
+       "results-rev1/cazumba_trends_ribbon.jpeg")
+# common recommendation: widths 6-8 cm (single column) or 16-18 cm (double column)
+#maximum height of around 27 cm
 
 
